@@ -269,13 +269,52 @@ class WebServer {
           builder.append("Content-Type: text/html; charset=utf-8\n");
           builder.append("\n");
           builder.append("<h1>Current Story</h1>\n");
-          for(String s : story){
+          for (String s : story) {
             builder.append(s + "<br>\n");
           }
 
           return builder.toString().getBytes();
 
-        } else {
+        } else if (request.startsWith("reverse")) {
+          try {
+            // Parse query parameters
+            Map<String, String> query_pairs = splitQuery(request.replace("reverse?", ""));
+            String text = query_pairs.get("text"); // get the ?text=...
+
+            // Clear builder before building response
+            builder.setLength(0);
+
+            if (text == null || text.isEmpty()) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("<h1>Error: No text provided to reverse</h1>");
+            } else {
+              // Reverse the text
+              String reversed = new StringBuilder(text).reverse().toString();
+
+              // Build response
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("<h1>Original:</h1>");
+              builder.append(text + "<br>");
+              builder.append("<h1>Reversed:</h1>");
+              builder.append(reversed);
+            }
+
+            response = builder.toString().getBytes();
+          } catch (UnsupportedEncodingException e) {
+            // Handle the unlikely exception gracefully
+            builder.setLength(0);
+            builder.append("HTTP/1.1 500 Internal Server Error\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("<h1>Encoding error occurred</h1>");
+            response = builder.toString().getBytes();
+          }
+
+      } else {
           // if the request is not recognized at all
 
           builder.append("HTTP/1.1 400 Bad Request\n");
