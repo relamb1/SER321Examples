@@ -1,5 +1,5 @@
 /*
-Simple Web Server in Java which allows you to call 
+Simple Web Server in Java which allows you to call
 localhost:9000/ and show you the root.html webpage from the www/root.html folder
 You can also do some other simple GET requests:
 1) /random shows you a random picture (well random from the set defined)
@@ -9,8 +9,8 @@ You can also do some other simple GET requests:
 5) /github?query=users/amehlhase316/repos (or other GitHub repo owners) will lead to receiving
    JSON which will for now only be printed in the console. See the todo below
 
-The reading of the request is done "manually", meaning no library that helps making things a 
-little easier is used. This is done so you see exactly how to pars the request and 
+The reading of the request is done "manually", meaning no library that helps making things a
+little easier is used. This is done so you see exactly how to pars the request and
 write a response back
 */
 
@@ -20,6 +20,7 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.Map;
@@ -30,6 +31,8 @@ class WebServer {
   public static void main(String args[]) {
     WebServer server = new WebServer(9000);
   }
+
+  private static List<String> story = new ArrayList<>();
 
   /**
    * Main thread
@@ -238,6 +241,40 @@ class WebServer {
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response based on what the assignment document asks for
 
+        } else if (request.startsWith("addline")) {
+          // Parse the query parameters
+          Map<String, String> query_pairs = splitQuery(request.replace("addline?", ""));
+          String line = query_pairs.get("text"); // get ?text=...
+
+          if (line != null && !line.isEmpty()) {
+            story.add(line); // add the line to the story
+          }
+
+          // Build HTML response to show the updated story
+          builder.setLength(0); // clear any old content
+          builder.append("HTTP/1.1 200 OK\n");
+          builder.append("Content-Type: text/html; charset=utf-8\n");
+          builder.append("\n");
+          builder.append("<h1>Updated Story</h1>\n");
+          for(String s : story){
+            builder.append(s + "<br>\n");
+          }
+
+          return builder.toString().getBytes();
+
+        } else if (request.equals("story")) {
+          // Build HTML response to show the story
+          builder.setLength(0); // clear any old content
+          builder.append("HTTP/1.1 200 OK\n");
+          builder.append("Content-Type: text/html; charset=utf-8\n");
+          builder.append("\n");
+          builder.append("<h1>Current Story</h1>\n");
+          for(String s : story){
+            builder.append(s + "<br>\n");
+          }
+
+          return builder.toString().getBytes();
+
         } else {
           // if the request is not recognized at all
 
@@ -330,7 +367,7 @@ class WebServer {
    * a method to make a web request. Note that this method will block execution
    * for up to 20 seconds while the request is being satisfied. Better to use a
    * non-blocking request.
-   * 
+   *
    * @param aUrl the String indicating the query url for the OMDb api search
    * @return the String result of the http request.
    *
