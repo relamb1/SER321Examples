@@ -3,11 +3,18 @@
 		<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
 	</head>
 	<body>
-		<h3>You can make the following GET requests<h3>
+		<h3>You can make the following GET requests:</h3>
 		<ul>
 			<li>/file/sample.html -- returns the content of the file sample.html</li>
-			<li>/json -- returns a json of the /random request</a></li>
-			<li>/random -- returns index.html</a></li>
+			<li>/json -- returns a JSON of the /random request</li>
+			<li>/random -- returns index.html</li>
+			<li>/multiply?num1=3&num2=4 -- multiplies two numbers. Example: <a href="/multiply?num1=3&num2=4">/multiply?num1=3&num2=4</a></li>
+			<li>/github?query=users/amehlhase316/repos -- lists GitHub repos. Example: <a href="/github?query=users/amehlhase316/repos">/github?query=users/amehlhase316/repos</a></li>
+			<li>/palindrome?text=Racecar&ignoreCase=true -- checks if text is a palindrome. Example: <a href="/palindrome?text=Racecar&ignoreCase=true">/palindrome?text=Racecar&ignoreCase=true</a></li>
+			<li>/fibonacci?start=5&count=10 -- returns Fibonacci sequence starting at index 5 for 10 numbers. Example: <a href="/fibonacci?start=5&count=10">/fibonacci?start=5&count=10</a></li>
+			<li>/addline?text=Hello -- adds a line to the story. Example: <a href="/addline?text=Hello">/addline?text=Hello</a></li>
+			<li>/story -- shows the current story</li>
+			<li>/reverse?text=Hello -- reverses the text. Example: <a href="/reverse?text=Hello">/reverse?text=Hello</a></li>
 		</ul>
 		<h3>File Structure in www (you can use /file/www/FILENAME):</h3>
 		${links}
