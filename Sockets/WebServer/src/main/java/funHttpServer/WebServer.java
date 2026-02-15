@@ -200,25 +200,46 @@ class WebServer {
           // This multiplies two numbers, there is NO error handling, so when
           // wrong data is given this just crashes
 
+          builder.setLength(0); // clear any old content
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           // extract path parameters
           query_pairs = splitQuery(request.replace("multiply?", ""));
+          Integer num1 = null;
+          Integer num2 = null;
 
           // extract required fields from parameters
-          Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-          Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+          try {
+            if (!query_pairs.containsKey("num1") || query_pairs.get("num1").isEmpty())
+              throw new IllegalArgumentException("num1 is missing");
+            num1 = Integer.parseInt(query_pairs.get("num1"));
+          } catch (Exception e) {
+            // Handle invalid or missing num1 with appropriate error code
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("<h1>Error: Invalid num1 – " + e.getMessage() + "</h1>");
+            return builder.toString().getBytes();
+          }
+
+          try {
+            if (!query_pairs.containsKey("num2") || query_pairs.get("num2").isEmpty())
+              throw new IllegalArgumentException("num2 is missing");
+            num2 = Integer.parseInt(query_pairs.get("num2"));
+          } catch (Exception e) {
+            // Handle invalid or missing num2 with appropriate error code
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("<h1>Error: Invalid num2 – " + e.getMessage() + "</h1>");
+            return builder.toString().getBytes();
+          }
 
           // do math
           Integer result = num1 * num2;
 
           // Generate response
           builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
+          builder.append("Content-Type: text/html; charset=utf-8\n\n");
           builder.append("Result is: " + result);
-
-          // TODO: Include error handling here with a correct error code and
-          // a response that makes sense
+          response = builder.toString().getBytes();
 
         } else if (request.contains("github?")) {
           // pulls the query from the request and runs it with GitHub's REST API
@@ -229,17 +250,50 @@ class WebServer {
           // "Owner's repo is named RepoName. Example: find RepoName's contributors" translates to
           //     "/repos/OWNERNAME/REPONAME/contributors"
 
-          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""));
-          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-          System.out.println(json);
+          builder.setLength(0); // clear old content
 
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Check the todos mentioned in the Java source file");
-          // TODO: Parse the JSON returned by your fetch and create an appropriate
-          // response based on what the assignment document asks for
+          try {
+            // extract the query parameter
+            Map<String, String> query_pairs = splitQuery(request.replace("github?", ""));
+            String query = query_pairs.get("query");
+            if (query == null || query.isEmpty())
+              throw new IllegalArgumentException("Missing query parameter");
+
+            // fetch the JSON from GitHub
+            String json = fetchURL("https://api.github.com/" + query);
+            if (json == null || json.isEmpty())
+              throw new IOException("Empty response from GitHub");
+
+            // Simple parsing: split JSON array into individual repo strings
+            String[] repos = json.split("\\},\\{"); // rough split for each repo
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("<h1>GitHub Repos:</h1>");
+
+            // iterate over each repo and extract desired fields
+            for (String repo : repos) {
+              // pull full_name
+              String full_name = repo.contains("\"full_name\"") ? repo.split("\"full_name\":\"")[1].split("\"")[0] : "N/A";
+              // pull id
+              String id = repo.contains("\"id\"") ? repo.split("\"id\":")[1].split(",")[0] : "N/A";
+              // pull owner login
+              String owner = repo.contains("\"owner\"") && repo.contains("\"login\"") ? repo.split("\"login\":\"")[1].split("\"")[0] : "N/A";
+
+              // add to HTML response
+              builder.append("Full Name: " + full_name + "<br>");
+              builder.append("ID: " + id + "<br>");
+              builder.append("Owner: " + owner + "<br><br>");
+            }
+
+          } catch (Exception e) {
+            // TODO: Parse the JSON returned by your fetch and create an appropriate
+            // response based on what the assignment document asks for
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("<h1>Error fetching GitHub repos: " + e.getMessage() + "</h1>");
+          }
+
+          response = builder.toString().getBytes();
 
         } else if (request.startsWith("addline")) {
           // Parse the query parameters
@@ -313,8 +367,76 @@ class WebServer {
             builder.append("<h1>Encoding error occurred</h1>");
             response = builder.toString().getBytes();
           }
+        } else if (request.startsWith("palindrome?")) {
+            // Check if the provided text is a palindrome
+            Map<String, String> query_pairs = splitQuery(request.replace("palindrome?", ""));
+            String text = query_pairs.get("text");
+            String ignoreCaseParam = query_pairs.getOrDefault("ignoreCase", "true");
 
-      } else {
+            builder.setLength(0); // clear old content
+
+            if (text == null || text.isEmpty()) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("<h1>Error: Missing 'text' parameter</h1>");
+            } else {
+              boolean ignoreCase = ignoreCaseParam.equalsIgnoreCase("true");
+
+              String processed = ignoreCase ? text.toLowerCase() : text;
+              String reversed = new StringBuilder(processed).reverse().toString();
+              boolean isPalindrome = processed.equals(reversed);
+
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("<h1>Palindrome Check</h1>");
+              builder.append("Text: " + text + "<br>");
+              builder.append("Ignore Case: " + ignoreCase + "<br>");
+              builder.append("Result: " + (isPalindrome ? "Yes, it's a palindrome!" : "No, not a palindrome"));
+            }
+
+            response = builder.toString().getBytes();
+        } else if (request.startsWith("fibonacci?")) {
+          // Generate a Fibonacci sequence starting from 'start' index for 'count' numbers
+          Map<String, String> query_pairs = splitQuery(request.replace("fibonacci?", ""));
+          builder.setLength(0);
+
+          try {
+            int start = Integer.parseInt(query_pairs.get("start"));
+            int count = Integer.parseInt(query_pairs.get("count"));
+
+            if (start < 0 || count <= 0) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("<h1>Error: 'start' must be >= 0 and 'count' must be > 0</h1>");
+            } else {
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("<h1>Fibonacci Sequence</h1>");
+              long a = 0, b = 1;
+
+              // Generate up to the 'start' index
+              for (int i = 0; i < start; i++) {
+                long temp = a + b;
+                a = b;
+                b = temp;
+              }
+
+              builder.append("Start index: " + start + "<br>Sequence: ");
+              for (int i = 0; i < count; i++) {
+                builder.append(a + " ");
+                long temp = a + b;
+                a = b;
+                b = temp;
+              }
+            }
+          } catch (NumberFormatException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("<h1>Error: Invalid number format for 'start' or 'count'</h1>");
+          }
+
+          response = builder.toString().getBytes();
+        } else {
           // if the request is not recognized at all
 
           builder.append("HTTP/1.1 400 Bad Request\n");
